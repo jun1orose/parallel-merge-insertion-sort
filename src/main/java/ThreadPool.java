@@ -2,7 +2,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class ThreadPool extends Thread {
+public class ThreadPool implements Runnable {
 
     private AtomicInteger freeThreads;
     private LinkedBlockingQueue<Runnable> taskQueue;
@@ -24,11 +24,12 @@ public class ThreadPool extends Thread {
         freeThreads.incrementAndGet();
     }
 
-    @Override
     public void run() {
         try {
             Runnable action = taskQueue.poll(1, TimeUnit.SECONDS);
-            new Thread(action).start();
+            if (action != null) {
+                new Thread(action).start();
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
