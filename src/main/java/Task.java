@@ -1,4 +1,4 @@
-abstract class AbstractTask extends Thread {
+class AbstractTask extends Thread {
     private ThreadPool threadPool;
     private Runnable action;
     final int priority;
