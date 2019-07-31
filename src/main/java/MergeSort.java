@@ -1,7 +1,10 @@
-public class MergeSort extends AbstractTask {
+import threadpool.Task;
+import threadpool.ThreadPool;
 
-    MergeSort(ThreadPool threadPool) {
-        this.threadPool = threadPool;
+public class MergeSort extends Task {
+
+    MergeSort(ThreadPool threadPool, int priority) {
+        super(threadPool, priority);
     }
 
     public void run() {

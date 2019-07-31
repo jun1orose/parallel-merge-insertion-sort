@@ -14,5 +14,9 @@ class Task extends Thread {
         threadPool.taskStarted();
         action.run();
         threadPool.taskFinished();
+
+        if (threadPool.isTerminated()) {
+            threadPool.notify();
+        }
     }
 }
