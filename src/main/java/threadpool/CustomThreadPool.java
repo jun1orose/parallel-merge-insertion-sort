@@ -1,3 +1,5 @@
+package threadpool;
+
 import java.util.Comparator;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -6,13 +8,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ThreadPool implements Runnable {
 
-    private final int threadLimit;
     private AtomicInteger freeThreads;
     private BlockingQueue<Task> taskQueue;
-    private boolean terminated = false;
+    private volatile boolean terminated;
 
-    public ThreadPool(int nThreads) {
-        this.threadLimit = nThreads;
+    ThreadPool(int nThreads) {
         this.freeThreads = new AtomicInteger(nThreads);
 
         Comparator<Task> priorityCompare = Comparator.comparingInt(t -> t.priority);
@@ -20,7 +20,7 @@ public class ThreadPool implements Runnable {
     }
 
     void addTask(Task task) {
-        if (!isTerminated()) {
+        if (!terminated) {
             taskQueue.add(task);
         }
     }
@@ -36,19 +36,20 @@ public class ThreadPool implements Runnable {
     public void run() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
-                if (this.freeThreads.get() != 0) {
-                    Task newTask = taskQueue.poll(1, TimeUnit.SECONDS);
-                    if (newTask != null) {
-                        newTask.start();
-                    } else {
-                        if (terminated) {
-
+                if (!terminated || (taskQueue.size() == 0)) {
+                    if (freeThreads.get() > 0) {
+                        Task newTask = taskQueue.poll(1, TimeUnit.SECONDS);
+                        if (newTask != null) {
+                            newTask.start();
                         } else {
-
+                            waitNewTask();
                         }
+                    } else {
+                        waitFreeThread();
                     }
+                } else {
+                    Thread.currentThread().interrupt();
                 }
-                waitUntilTerminated();
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -59,13 +60,19 @@ public class ThreadPool implements Runnable {
         terminated = true;
     }
 
-    private void waitUntilTerminated() throws InterruptedException {
-        while (!terminated) {
-            wait();
+    private synchronized void waitNewTask() throws InterruptedException {
+        while (taskQueue.size() == 0) {
+            this.wait();
         }
     }
 
-    boolean isTerminated() {
-        return terminated;
+    private synchronized void waitFreeThread() throws InterruptedException {
+        while (freeThreads.get() == 0) {
+            this.wait();
+        }
+    }
+
+    private synchronized void wakeUp() {
+        this.notifyAll();
     }
 }
