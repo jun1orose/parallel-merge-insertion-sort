@@ -6,13 +6,13 @@ import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class ThreadPool implements Runnable {
+public class CustomThreadPool implements Runnable {
 
     private AtomicInteger freeThreads;
     private BlockingQueue<Task> taskQueue;
     private volatile boolean terminated;
 
-    ThreadPool(int nThreads) {
+    CustomThreadPool(int nThreads) {
         this.freeThreads = new AtomicInteger(nThreads);
 
         Comparator<Task> priorityCompare = Comparator.comparingInt(t -> t.priority);
@@ -22,6 +22,10 @@ public class ThreadPool implements Runnable {
     void addTask(Task task) {
         if (!terminated) {
             taskQueue.add(task);
+
+            if (taskQueue.size() == 1) {
+                wakeUp();
+            }
         }
     }
 
@@ -30,13 +34,15 @@ public class ThreadPool implements Runnable {
     }
 
     void taskFinished() {
-        freeThreads.incrementAndGet();
+        if (freeThreads.incrementAndGet() == 1) {
+            wakeUp();
+        }
     }
 
     public void run() {
         try {
             while (!Thread.currentThread().isInterrupted()) {
-                if (!terminated || (taskQueue.size() == 0)) {
+                if (!terminated || (taskQueue.size() != 0)) {
                     if (freeThreads.get() > 0) {
                         Task newTask = taskQueue.poll(1, TimeUnit.SECONDS);
                         if (newTask != null) {
