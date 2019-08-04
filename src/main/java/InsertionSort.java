@@ -1,23 +1,25 @@
+import java.util.ArrayList;
+import java.util.List;
 
 public class InsertionSort implements Runnable {
 
-    private int[] array;
+    private List<Integer> array;
 
-    public InsertionSort(int[] input) {
+    public InsertionSort(ArrayList<Integer> input) {
         this.array = input;
     }
     
     public void run() {
-        for (int i = 1; i < array.length; i++) {
-            int x = array[i];
+        for (int i = 1; i <= array.size(); i++) {
+            int x = array.get(i);
             int j = i - 1;
 
-            while (j >= 0 && array[j] > x) {
-                array[j + 1] = array[j];
+            while (j >= 0 && array.get(j) > x) {
+                array.set(j + 1, array.get(j));
                 j = j - 1;
             }
 
-            array[j+1] = x;
+            array.set(j + 1, x);
         }
     }
 }
