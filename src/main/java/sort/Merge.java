@@ -1,10 +1,10 @@
 
-public class MergeConcatenation implements Runnable {
+public class Merge implements Runnable {
 
     private int[] leftArr;
     private int[] rightArr;
 
-    public MergeConcatenation() {
+    public Merge() {
 
     }
 
