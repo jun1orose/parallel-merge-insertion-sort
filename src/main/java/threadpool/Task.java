@@ -1,22 +1,23 @@
-class Task extends Thread {
-    private ThreadPool threadPool;
+package threadpool;
+
+public class Task extends Thread {
+    private static CustomThreadPool customThreadPool;
     private Runnable action;
     final int priority;
+    private TaskCounter countOfRelatedTasks;
 
-    Task(ThreadPool threadPool, int priority, Runnable action) {
-        this.threadPool = threadPool;
+    Task(CustomThreadPool customThreadPool, Runnable action, int priority, TaskCounter countOfRelatedTasks) {
+        Task.customThreadPool = customThreadPool;
         this.priority = priority;
         this.action = action;
+        this.countOfRelatedTasks = countOfRelatedTasks;
     }
 
     @Override
     public void run() {
-        threadPool.taskStarted();
-        action.run();
-        threadPool.taskFinished();
-
-        if (threadPool.isTerminated()) {
-            threadPool.notify();
-        }
+        Task.customThreadPool.taskStarted();
+        this.action.run();
+        this.countOfRelatedTasks.decrement();
+        Task.customThreadPool.taskFinished();
     }
 }
