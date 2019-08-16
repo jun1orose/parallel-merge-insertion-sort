@@ -1,20 +1,24 @@
 package sort;
 
-import java.util.List;
+import threadpool.Task;
+import threadpool.TaskCounter;
 
-public class Merge implements Runnable {
+public class Merge extends Task {
 
     private int[] arr;
     private int[] leftArr;
     private int[] rightArr;
 
-    public Merge(int[] input, int[] leftArr, int[] rightArr) {
+    Merge(int priority, TaskCounter countOfRelatedTasks,
+          TaskCounter childTaskCounter, int[] input, int[] leftArr, int[] rightArr) {
+
+        super(priority, countOfRelatedTasks, childTaskCounter);
         this.arr = input;
         this.leftArr = leftArr;
         this.rightArr = rightArr;
     }
 
-    public void run() {
+    public void solve() {
         int i = 0;
         int j = 0;
         int k = 0;

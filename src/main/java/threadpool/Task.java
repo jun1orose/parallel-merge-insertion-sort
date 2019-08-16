@@ -1,27 +1,30 @@
 package threadpool;
 
-public class Task extends Thread {
-    private static CustomThreadPool customThreadPool;
-    private Runnable action;
-    final int priority;
-    private TaskCounter countOfRelatedTasks = new TaskCounter(0);
+public abstract class Task implements Runnable {
+    int priority;
 
-    public Task(CustomThreadPool customThreadPool, Runnable action, int priority) {
-        Task.customThreadPool = customThreadPool;
+    private TaskCounter relatedTaskCounter;
+    private TaskCounter childTaskCounter;
+
+    public Task(int priority, TaskCounter countOfRelatedTasks, TaskCounter childTaskCounter) {
         this.priority = priority;
-        this.action = action;
+        this.relatedTaskCounter = countOfRelatedTasks;
+        this.childTaskCounter = childTaskCounter;
     }
 
-    public Task(CustomThreadPool customThreadPool, Runnable action, int priority, TaskCounter countOfRelatedTasks) {
-        this(customThreadPool, action, priority);
-        this.countOfRelatedTasks = countOfRelatedTasks;
-    }
+    protected abstract void solve();
 
     @Override
     public void run() {
-        Task.customThreadPool.taskStarted();
-        this.action.run();
-        this.countOfRelatedTasks.decrement();
-        Task.customThreadPool.taskFinished();
+        this.solve();
+        this.relatedTaskCounter.decrement();
+    }
+
+    boolean isAvailableForExecuting() {
+        return childTaskCounter.getCounter() <= 0;
+    }
+
+    void increasePriority() {
+
     }
 }

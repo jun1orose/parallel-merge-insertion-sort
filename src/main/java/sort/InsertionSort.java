@@ -1,14 +1,20 @@
 package sort;
 
-public class InsertionSort implements Runnable {
+import threadpool.Task;
+import threadpool.TaskCounter;
+
+public class InsertionSort extends Task {
 
     private int[] arr;
 
-    public InsertionSort(int[] input) {
+    InsertionSort(int priority, TaskCounter countOfRelatedTasks,
+                  TaskCounter childTaskCounter, int[] input) {
+
+        super(priority, countOfRelatedTasks, childTaskCounter);
         this.arr = input;
     }
-    
-    public void run() {
+
+    protected void solve() {
         for (int i = 1; i < arr.length; i++) {
             int x = arr[i];
             int j = i - 1;
