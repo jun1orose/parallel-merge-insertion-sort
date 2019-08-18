@@ -14,7 +14,7 @@ public class InsertionSort extends Task {
         this.arr = input;
     }
 
-    protected void solve() {
+    public void solve() {
         for (int i = 1; i < arr.length; i++) {
             int x = arr[i];
             int j = i - 1;
