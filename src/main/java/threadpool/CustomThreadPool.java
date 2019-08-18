@@ -1,64 +1,43 @@
 package threadpool;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
-public class CustomThreadPool implements Runnable {
+public class CustomThreadPool {
 
-    private AtomicInteger freeThreads;
-    private BlockingQueue<Task> taskQueue;
+    private final BlockingQueue<Task> taskQueue;
+    private final List<CustomThreadPool.Worker> workers;
+
     private volatile boolean terminated;
 
-    CustomThreadPool(int nThreads) {
-        this.freeThreads = new AtomicInteger(nThreads);
-
-        Comparator<Task> priorityCompare = Comparator.comparingInt(t -> t.priority);
-        this.taskQueue = new PriorityBlockingQueue<>(nThreads, priorityCompare);
-    }
-
-    void addTask(Task task) {
-        if (!terminated) {
-            taskQueue.add(task);
-
-            if (taskQueue.size() == 1) {
-                wakeUp();
+    public CustomThreadPool(int nThreads) {
+        Comparator<Task> priorityCompare = (t1, t2) -> {
+            int res = Integer.compare(t2.priority, t1.priority);
+            if (res == 0) {
+                res = (t1.seqNum < t2.seqNum ? -1 : 1);
             }
+            return res;
+        };
+
+        this.taskQueue = new PriorityBlockingQueue<>(16, priorityCompare);
+        this.workers = new ArrayList<>(nThreads);
+        for (int i = 0; i < nThreads; i++) {
+            this.workers.add(new CustomThreadPool.Worker());
         }
+        this.workers.forEach(Thread::start);
     }
 
-    void taskStarted() {
-        freeThreads.decrementAndGet();
-    }
-
-    void taskFinished() {
-        if (freeThreads.incrementAndGet() == 1) {
-            wakeUp();
-        }
-    }
-
-    public void run() {
-        try {
-            while (!Thread.currentThread().isInterrupted()) {
-                if (!terminated || (taskQueue.size() != 0)) {
-                    if (freeThreads.get() > 0) {
-                        Task newTask = taskQueue.poll(1, TimeUnit.SECONDS);
-                        if (newTask != null) {
-                            newTask.start();
-                        } else {
-                            waitNewTask();
-                        }
-                    } else {
-                        waitFreeThread();
-                    }
-                } else {
-                    Thread.currentThread().interrupt();
-                }
-            }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+    // not threadsafe
+    public void addTask(Task task) {
+        if (this.taskQueue.isEmpty()) {
+            this.taskQueue.add(task);
+            this.wakeUpWorkers();
+        } else {
+            this.taskQueue.add(task);
         }
     }
 
@@ -66,19 +45,52 @@ public class CustomThreadPool implements Runnable {
         terminated = true;
     }
 
+    public void awaitTerminating() {
+        this.workers.forEach(worker -> {
+            try {
+                worker.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
     private synchronized void waitNewTask() throws InterruptedException {
-        while (taskQueue.size() == 0) {
+        while (!this.terminated && this.taskQueue.isEmpty()) {
             this.wait();
         }
     }
 
-    private synchronized void waitFreeThread() throws InterruptedException {
-        while (freeThreads.get() == 0) {
-            this.wait();
+    private synchronized void wakeUpWorkers() {
+        if (!this.taskQueue.isEmpty()) {
+            this.notifyAll();
         }
     }
 
-    private synchronized void wakeUp() {
-        this.notifyAll();
+    private final class Worker extends Thread {
+        @Override
+        public void run() {
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
+                    if (!CustomThreadPool.this.terminated || !CustomThreadPool.this.taskQueue.isEmpty()) {
+                        Task newTask = CustomThreadPool.this.taskQueue.poll(100, TimeUnit.MILLISECONDS);
+                        if (newTask != null) {
+                            if (newTask.isAvailableForExecuting()) {
+                                newTask.run();
+                            } else {
+                                newTask.increaseSeqNum();
+                                CustomThreadPool.this.addTask(newTask);
+                            }
+                        } else {
+                            CustomThreadPool.this.waitNewTask();
+                        }
+                    } else {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
