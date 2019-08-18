@@ -1,13 +1,20 @@
 package threadpool;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 public abstract class Task implements Runnable {
-    int priority;
+
+    final int priority;
+    private final static AtomicLong seq = new AtomicLong();
+    long seqNum;
 
     private TaskCounter relatedTaskCounter;
     private TaskCounter childTaskCounter;
 
     public Task(int priority, TaskCounter countOfRelatedTasks, TaskCounter childTaskCounter) {
         this.priority = priority;
+        this.seqNum = Task.seq.getAndIncrement();
+
         this.relatedTaskCounter = countOfRelatedTasks;
         this.childTaskCounter = childTaskCounter;
     }
@@ -24,7 +31,7 @@ public abstract class Task implements Runnable {
         return childTaskCounter.getCounter() <= 0;
     }
 
-    void increasePriority() {
-
+    void increaseSeqNum() {
+        this.seqNum = Task.seq.getAndIncrement();
     }
 }

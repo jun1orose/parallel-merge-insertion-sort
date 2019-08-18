@@ -3,11 +3,11 @@ package threadpool;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-class TaskCounter {
+public class TaskCounter {
     private Lock lock;
     private volatile int counter;
 
-    TaskCounter(int counter) {
+    public TaskCounter(int counter) {
         this.lock = new ReentrantLock();
         this.counter = counter;
     }
